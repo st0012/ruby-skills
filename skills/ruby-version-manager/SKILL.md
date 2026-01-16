@@ -1,11 +1,25 @@
 ---
 name: ruby-version-manager
-description: Use when working with Ruby projects, before running ruby/gem/bundle commands, or when Ruby commands fail with version errors
+description: Use at session start for Ruby projects (Gemfile, .ruby-version, or .tool-versions present). Detect version manager BEFORE running ruby, bundle, gem, rake, rails, rspec, or any Ruby command.
 ---
 
 # Ruby Version Manager Skill
 
-This skill detects and configures Ruby version managers for proper environment setup. Run the detection script before executing any Ruby commands.
+Detects and configures Ruby version managers for proper environment setup.
+
+## When to Use
+
+**Run detect.sh IMMEDIATELY when:**
+- Starting work in a directory with `Gemfile`, `.ruby-version`, or `.tool-versions`
+- Before your first `ruby`, `bundle`, `gem`, `rake`, `rails`, or `rspec` command
+- When switching between Ruby projects
+
+**Do NOT wait for:**
+- Ruby commands to fail first
+- User to explicitly ask for version detection
+- Problems to occur
+
+**Proactive detection prevents version mismatch errors.**
 
 ## Critical: Non-Persistent Bash Sessions
 

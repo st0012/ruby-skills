@@ -1,0 +1,11 @@
+{
+  "name": "ruby-skills",
+  "description": "Ruby development skills for Claude Code - version manager detection, environment setup, and more",
+  "version": "1.0.0",
+  "author": {
+    "name": "Stan Lo",
+    "url": "https://github.com/st0012"
+  },
+  "repository": "https://github.com/st0012/ruby-skills",
+  "license": "MIT"
+}
