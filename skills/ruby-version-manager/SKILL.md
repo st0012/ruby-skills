@@ -144,8 +144,7 @@ Use the `ACTIVATION_COMMAND` from detect.sh output. If you need to construct com
 | Manager | Activation Command | Execution Pattern |
 |---------|-------------------|-------------------|
 | rbenv | `eval "$(rbenv init -)"` | `rbenv exec ruby ...` or activate then run |
-| chruby | `source /opt/homebrew/share/chruby/chruby.sh && source /opt/homebrew/share/chruby/auto.sh` | Activate then run directly |
-| chruby (Linux) | `source /usr/local/share/chruby/chruby.sh && source /usr/local/share/chruby/auto.sh` | Activate then run directly |
+| chruby | `source .../chruby.sh && chruby <version>` | Explicit version switch (detect.sh provides full command) |
 | rvm | `source "$HOME/.rvm/scripts/rvm"` | Activate then run, or use `~/.rvm/bin/rvm-auto-ruby` |
 | asdf (v0.16+) | None needed | `asdf exec ruby ...` |
 | asdf (<v0.16) | `source "$HOME/.asdf/asdf.sh"` | `asdf exec ruby ...` |
@@ -181,10 +180,13 @@ eval "$(rbenv init -)" && bundle exec rake test
 
 **chruby:**
 ```bash
-source /opt/homebrew/share/chruby/chruby.sh && source /opt/homebrew/share/chruby/auto.sh && bundle install
-source /opt/homebrew/share/chruby/chruby.sh && source /opt/homebrew/share/chruby/auto.sh && bundle exec rspec
-source /opt/homebrew/share/chruby/chruby.sh && source /opt/homebrew/share/chruby/auto.sh && bundle exec rake test
+# Use ACTIVATION_COMMAND from detect.sh - it includes the correct path and version
+source /usr/local/share/chruby/chruby.sh && chruby ruby-3.3.0 && bundle install
+source /usr/local/share/chruby/chruby.sh && chruby ruby-3.3.0 && bundle exec rspec
+source /usr/local/share/chruby/chruby.sh && chruby ruby-3.3.0 && bundle exec rake test
 ```
+
+> **Note:** We use explicit `chruby <version>` instead of `auto.sh` because `auto.sh` only triggers on directory change (`cd`), which doesn't work in Claude Code's non-persistent shell sessions.
 
 **asdf (v0.16+):**
 ```bash
