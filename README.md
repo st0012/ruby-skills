@@ -11,7 +11,7 @@ Claude Code skills for Ruby development.
 ### Claude Code
 
 ```bash
-/plugin install st0012/ruby-skills
+/plugin install ruby-skills@github:st0012/ruby-skills
 ```
 
 ### Verify Installation
