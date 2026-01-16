@@ -1,2 +1,4 @@
 # Development files
 *.bak
+.claude/
+docs/plans/
