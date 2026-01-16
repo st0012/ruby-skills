@@ -45,11 +45,14 @@ This applies to ALL Ruby commands: `ruby`, `gem`, `bundle`, `rake`, `rspec`, `ra
 Run the detection script from your Ruby project's root directory:
 
 ```bash
-# The script is in the same directory as this SKILL.md
-# If this skill is at ~/.claude/skills/ruby-version-manager/SKILL.md:
+# Find and run detect.sh (adjust path based on your installation)
+# As a plugin:
+~/.claude/plugins/cache/*/ruby-skills/*/skills/ruby-version-manager/detect.sh
+
+# As a personal skill:
 ~/.claude/skills/ruby-version-manager/detect.sh
 
-# Or use the full path where you installed the skill
+# The session-start hook will tell you the exact path
 ```
 
 ### Step 2: Parse Output

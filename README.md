@@ -18,6 +18,18 @@ Claude Code skills for Ruby development.
 
 After installation, Claude will automatically use these skills when working with Ruby projects.
 
+### Automatic Ruby Project Detection
+
+When you start a Claude Code session in a directory containing:
+- `Gemfile`
+- `.ruby-version`
+- `.tool-versions`
+- `.mise.toml`
+
+The plugin automatically detects this and instructs Claude to use the ruby-version-manager skill before running any Ruby commands.
+
+**No manual prompting required** - Claude will proactively run version detection.
+
 ## Included Skills
 
 ### ruby-version-manager
