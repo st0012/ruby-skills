@@ -1,0 +1,22 @@
+{
+  "name": "ruby-skills",
+  "owner": {
+    "name": "Stan Lo",
+    "email": "stan001212@gmail.com"
+  },
+  "metadata": {
+    "description": "Ruby development skills for Claude Code",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "ruby-skills",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/st0012/ruby-skills.git"
+      },
+      "description": "Ruby version manager detection, environment setup, and more",
+      "version": "0.1.0"
+    }
+  ]
+}
