@@ -1,98 +1,70 @@
 #!/usr/bin/env bash
 #
 # Detect ALL installed Ruby version managers
-# Outputs JSON-like format for easy parsing
+# Can be sourced by other scripts or run standalone
 #
 
 set -u
 
-# Detection functions (simplified - just check if installed)
-check_shadowenv() {
-    if [[ -d ".shadowenv.d" ]] && command -v shadowenv &>/dev/null; then
-        return 0
-    fi
-    return 1
+# Detection functions
+_check_shadowenv() {
+    [[ -d ".shadowenv.d" ]] && command -v shadowenv &>/dev/null
 }
 
-check_chruby() {
+_check_chruby() {
     # chruby doesn't have --version flag. Detect by checking:
     # 1. chruby.sh script exists at known locations
     # 2. Ruby installations exist in ~/.rubies or /opt/rubies
-
-    # Check for chruby.sh script
-    local chruby_script=""
-    if [[ -f "/opt/homebrew/share/chruby/chruby.sh" ]]; then
-        chruby_script="/opt/homebrew/share/chruby/chruby.sh"
-    elif [[ -f "/usr/local/share/chruby/chruby.sh" ]]; then
-        chruby_script="/usr/local/share/chruby/chruby.sh"
-    fi
-
-    # Check for Ruby installations in chruby directories
-    local has_rubies=false
-    if [[ -d "$HOME/.rubies" ]] && [[ -n "$(ls -A "$HOME/.rubies" 2>/dev/null)" ]]; then
-        has_rubies=true
-    elif [[ -d "/opt/rubies" ]] && [[ -n "$(ls -A "/opt/rubies" 2>/dev/null)" ]]; then
-        has_rubies=true
-    fi
-
-    # chruby is available if script exists OR rubies directory has installations
-    if [[ -n "$chruby_script" ]] || $has_rubies; then
-        return 0
-    fi
-    return 1
+    [[ -f "/opt/homebrew/share/chruby/chruby.sh" ]] ||
+    [[ -f "/usr/local/share/chruby/chruby.sh" ]] ||
+    [[ -f "/usr/share/chruby/chruby.sh" ]] ||
+    { [[ -d "$HOME/.rubies" ]] && [[ -n "$(ls -A "$HOME/.rubies" 2>/dev/null)" ]]; } ||
+    { [[ -d "/opt/rubies" ]] && [[ -n "$(ls -A "/opt/rubies" 2>/dev/null)" ]]; }
 }
 
-check_rbenv() {
-    if timeout 1 bash -lc "rbenv --version" 2>/dev/null | grep -q "rbenv"; then
-        return 0
-    fi
-    return 1
+_check_rbenv() {
+    timeout 1 bash -lc "rbenv --version" 2>/dev/null | grep -q "rbenv"
 }
 
-check_rvm() {
-    if timeout 1 bash -lc "rvm --version" 2>/dev/null | grep -q "rvm"; then
-        return 0
-    fi
-    return 1
+_check_rvm() {
+    timeout 1 bash -lc "rvm --version" 2>/dev/null | grep -q "rvm"
 }
 
-check_asdf() {
-    if timeout 1 bash -lc "asdf --version" 2>/dev/null | grep -qE "^(v|[0-9])"; then
-        return 0
-    fi
-    return 1
+_check_asdf() {
+    timeout 1 bash -lc "asdf --version" 2>/dev/null | grep -qE "^(v|[0-9])"
 }
 
-check_rv() {
-    if timeout 1 bash -lc "rv --version" 2>/dev/null | grep -q "rv"; then
-        return 0
-    fi
-    return 1
+_check_rv() {
+    timeout 1 bash -lc "rv --version" 2>/dev/null | grep -q "rv"
 }
 
-check_mise() {
+_check_mise() {
     for path in "$HOME/.local/bin/mise" "/opt/homebrew/bin/mise" "/usr/local/bin/mise" "/usr/bin/mise"; do
-        if [[ -x "$path" ]]; then
-            return 0
-        fi
+        [[ -x "$path" ]] && return 0
     done
-    if command -v mise &>/dev/null; then
-        return 0
-    fi
-    return 1
+    command -v mise &>/dev/null
 }
 
-# Main
-managers=()
+# Main function - returns space-separated list of installed managers
+get_installed_managers() {
+    local managers=()
 
-check_shadowenv && managers+=("shadowenv")
-check_chruby && managers+=("chruby")
-check_rbenv && managers+=("rbenv")
-check_rvm && managers+=("rvm")
-check_asdf && managers+=("asdf")
-check_rv && managers+=("rv")
-check_mise && managers+=("mise")
+    _check_shadowenv && managers+=("shadowenv")
+    _check_chruby && managers+=("chruby")
+    _check_rbenv && managers+=("rbenv")
+    _check_rvm && managers+=("rvm")
+    _check_asdf && managers+=("asdf")
+    _check_rv && managers+=("rv")
+    _check_mise && managers+=("mise")
 
-# Output as comma-separated list
-echo "INSTALLED_MANAGERS=$(IFS=,; echo "${managers[*]}")"
-echo "MANAGER_COUNT=${#managers[@]}"
+    echo "${managers[*]}"
+}
+
+# Run standalone if executed directly (not sourced)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    managers=$(get_installed_managers)
+    manager_array=($managers)
+
+    echo "INSTALLED_MANAGERS=$(IFS=,; echo "${manager_array[*]}")"
+    echo "MANAGER_COUNT=${#manager_array[@]}"
+fi

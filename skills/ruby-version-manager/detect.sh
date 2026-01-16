@@ -38,57 +38,13 @@ read_preference() {
     return 1
 }
 
-# Detect all installed managers
+# Source the detect-all-managers script for shared detection logic
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/detect-all-managers.sh"
+
+# Wrapper to maintain compatibility (returns space-separated list)
 detect_all_managers() {
-    local managers=()
-
-    # Check each manager (order doesn't matter here)
-    if [[ -d ".shadowenv.d" ]] && command_exists shadowenv; then
-        managers+=("shadowenv")
-    fi
-
-    # chruby: check for chruby.sh script OR rubies in ~/.rubies or /opt/rubies
-    local chruby_found=false
-    if [[ -f "/opt/homebrew/share/chruby/chruby.sh" ]] || [[ -f "/usr/local/share/chruby/chruby.sh" ]] || [[ -f "/usr/share/chruby/chruby.sh" ]]; then
-        chruby_found=true
-    elif [[ -d "$HOME/.rubies" ]] && [[ -n "$(ls -A "$HOME/.rubies" 2>/dev/null)" ]]; then
-        chruby_found=true
-    elif [[ -d "/opt/rubies" ]] && [[ -n "$(ls -A "/opt/rubies" 2>/dev/null)" ]]; then
-        chruby_found=true
-    fi
-    if $chruby_found; then
-        managers+=("chruby")
-    fi
-
-    if timeout 1 bash -lc "rbenv --version" 2>/dev/null | grep -q "rbenv"; then
-        managers+=("rbenv")
-    fi
-
-    if timeout 1 bash -lc "rvm --version" 2>/dev/null | grep -q "rvm"; then
-        managers+=("rvm")
-    fi
-
-    if timeout 1 bash -lc "asdf --version" 2>/dev/null | grep -qE "^(v|[0-9])"; then
-        managers+=("asdf")
-    fi
-
-    if timeout 1 bash -lc "rv --version" 2>/dev/null | grep -q "rv"; then
-        managers+=("rv")
-    fi
-
-    # Check mise
-    local mise_found=false
-    for path in "$HOME/.local/bin/mise" "/opt/homebrew/bin/mise" "/usr/local/bin/mise" "/usr/bin/mise"; do
-        if [[ -x "$path" ]]; then
-            mise_found=true
-            break
-        fi
-    done
-    if $mise_found || command -v mise &>/dev/null; then
-        managers+=("mise")
-    fi
-
-    echo "${managers[*]}"
+    get_installed_managers
 }
 
 # Parse Ruby version string
@@ -356,6 +312,24 @@ check_version_available() {
     local search_version="$PROJECT_RUBY_VERSION"
     if [[ "$RUBY_ENGINE" != "ruby" ]]; then
         search_version="${RUBY_ENGINE}-${PROJECT_RUBY_VERSION}"
+    fi
+
+    # For chruby, find the matching directory name and update ACTIVATION_COMMAND
+    local matched_ruby=""
+    if [[ "$VERSION_MANAGER" == "chruby" ]]; then
+        # Try to find exact match first (e.g., "ruby-4.0.0")
+        if echo "$INSTALLED_RUBIES" | grep -qE "(^|,)ruby-${PROJECT_RUBY_VERSION}(,|$)"; then
+            matched_ruby="ruby-${PROJECT_RUBY_VERSION}"
+        elif echo "$INSTALLED_RUBIES" | grep -qE "(^|,)${search_version}(,|$)"; then
+            matched_ruby="${search_version}"
+        elif echo "$INSTALLED_RUBIES" | grep -qE "(^|,)${PROJECT_RUBY_VERSION}(,|$)"; then
+            matched_ruby="${PROJECT_RUBY_VERSION}"
+        fi
+
+        # Update ACTIVATION_COMMAND to actually switch to the version
+        if [[ -n "$matched_ruby" && -n "$VERSION_MANAGER_PATH" ]]; then
+            ACTIVATION_COMMAND="source ${VERSION_MANAGER_PATH}/chruby.sh && chruby ${matched_ruby}"
+        fi
     fi
 
     # Check if version is in installed list
