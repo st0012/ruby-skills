@@ -21,6 +21,76 @@ ACTIVATION_COMMAND=""
 SYSTEM_RUBY_VERSION=""
 WARNING=""
 
+# Preference storage
+PREFERENCE_FILE_USER="$HOME/.config/ruby-skills/preference.json"
+PREFERRED_MANAGER=""
+
+# Read stored preference
+read_preference() {
+    if [[ -f "$PREFERENCE_FILE_USER" ]]; then
+        # Parse JSON for preferred_manager field
+        PREFERRED_MANAGER=$(grep -o '"preferred_manager"[[:space:]]*:[[:space:]]*"[^"]*"' "$PREFERENCE_FILE_USER" 2>/dev/null | sed 's/.*:.*"\([^"]*\)".*/\1/')
+        if [[ -n "$PREFERRED_MANAGER" ]]; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Detect all installed managers
+detect_all_managers() {
+    local managers=()
+
+    # Check each manager (order doesn't matter here)
+    if [[ -d ".shadowenv.d" ]] && command_exists shadowenv; then
+        managers+=("shadowenv")
+    fi
+
+    # chruby: check for chruby.sh script OR rubies in ~/.rubies or /opt/rubies
+    local chruby_found=false
+    if [[ -f "/opt/homebrew/share/chruby/chruby.sh" ]] || [[ -f "/usr/local/share/chruby/chruby.sh" ]] || [[ -f "/usr/share/chruby/chruby.sh" ]]; then
+        chruby_found=true
+    elif [[ -d "$HOME/.rubies" ]] && [[ -n "$(ls -A "$HOME/.rubies" 2>/dev/null)" ]]; then
+        chruby_found=true
+    elif [[ -d "/opt/rubies" ]] && [[ -n "$(ls -A "/opt/rubies" 2>/dev/null)" ]]; then
+        chruby_found=true
+    fi
+    if $chruby_found; then
+        managers+=("chruby")
+    fi
+
+    if timeout 1 bash -lc "rbenv --version" 2>/dev/null | grep -q "rbenv"; then
+        managers+=("rbenv")
+    fi
+
+    if timeout 1 bash -lc "rvm --version" 2>/dev/null | grep -q "rvm"; then
+        managers+=("rvm")
+    fi
+
+    if timeout 1 bash -lc "asdf --version" 2>/dev/null | grep -qE "^(v|[0-9])"; then
+        managers+=("asdf")
+    fi
+
+    if timeout 1 bash -lc "rv --version" 2>/dev/null | grep -q "rv"; then
+        managers+=("rv")
+    fi
+
+    # Check mise
+    local mise_found=false
+    for path in "$HOME/.local/bin/mise" "/opt/homebrew/bin/mise" "/usr/local/bin/mise" "/usr/bin/mise"; do
+        if [[ -x "$path" ]]; then
+            mise_found=true
+            break
+        fi
+    done
+    if $mise_found || command -v mise &>/dev/null; then
+        managers+=("mise")
+    fi
+
+    echo "${managers[*]}"
+}
+
 # Parse Ruby version string
 # Supports: 3.3.0, ruby-3.3.0, truffleruby-21.3.0, 3.3.0-rc1, 3.3
 parse_ruby_version() {
@@ -113,33 +183,43 @@ detect_shadowenv() {
 }
 
 # Detect chruby
+# chruby doesn't have --version flag. Detect by checking:
+# 1. chruby.sh script exists at known locations
+# 2. Ruby installations exist in ~/.rubies or /opt/rubies
 detect_chruby() {
-    if run_with_timeout "chruby --version" | grep -q "chruby"; then
-        VERSION_MANAGER="chruby"
+    # Find chruby installation path
+    local chruby_script=""
+    if [[ -f "/opt/homebrew/share/chruby/chruby.sh" ]]; then
+        chruby_script="/opt/homebrew/share/chruby/chruby.sh"
+        VERSION_MANAGER_PATH="/opt/homebrew/share/chruby"
+        ACTIVATION_COMMAND="source /opt/homebrew/share/chruby/chruby.sh && source /opt/homebrew/share/chruby/auto.sh"
+    elif [[ -f "/usr/local/share/chruby/chruby.sh" ]]; then
+        chruby_script="/usr/local/share/chruby/chruby.sh"
+        VERSION_MANAGER_PATH="/usr/local/share/chruby"
+        ACTIVATION_COMMAND="source /usr/local/share/chruby/chruby.sh && source /usr/local/share/chruby/auto.sh"
+    elif [[ -f "/usr/share/chruby/chruby.sh" ]]; then
+        chruby_script="/usr/share/chruby/chruby.sh"
+        VERSION_MANAGER_PATH="/usr/share/chruby"
+        ACTIVATION_COMMAND="source /usr/share/chruby/chruby.sh && source /usr/share/chruby/auto.sh"
+    fi
 
-        # Find chruby installation path
-        if [[ -f "/opt/homebrew/share/chruby/chruby.sh" ]]; then
-            VERSION_MANAGER_PATH="/opt/homebrew/share/chruby"
-            ACTIVATION_COMMAND="source /opt/homebrew/share/chruby/chruby.sh && source /opt/homebrew/share/chruby/auto.sh"
-        elif [[ -f "/usr/local/share/chruby/chruby.sh" ]]; then
-            VERSION_MANAGER_PATH="/usr/local/share/chruby"
-            ACTIVATION_COMMAND="source /usr/local/share/chruby/chruby.sh && source /usr/local/share/chruby/auto.sh"
-        elif [[ -f "/usr/share/chruby/chruby.sh" ]]; then
-            VERSION_MANAGER_PATH="/usr/share/chruby"
-            ACTIVATION_COMMAND="source /usr/share/chruby/chruby.sh && source /usr/share/chruby/auto.sh"
+    # Check for Ruby installations in chruby directories
+    local has_rubies=false
+    local rubies=()
+    for dir in "$HOME/.rubies" "/opt/rubies"; do
+        if [[ -d "$dir" ]]; then
+            for ruby_dir in "$dir"/*; do
+                if [[ -d "$ruby_dir" && -x "$ruby_dir/bin/ruby" ]]; then
+                    rubies+=("$(basename "$ruby_dir")")
+                    has_rubies=true
+                fi
+            done
         fi
+    done
 
-        # Find installed rubies
-        local rubies=()
-        for dir in "$HOME/.rubies" "/opt/rubies"; do
-            if [[ -d "$dir" ]]; then
-                for ruby_dir in "$dir"/*; do
-                    if [[ -d "$ruby_dir" && -x "$ruby_dir/bin/ruby" ]]; then
-                        rubies+=("$(basename "$ruby_dir")")
-                    fi
-                done
-            fi
-        done
+    # chruby is available if script exists OR rubies directory has installations
+    if [[ -n "$chruby_script" ]] || $has_rubies; then
+        VERSION_MANAGER="chruby"
         INSTALLED_RUBIES=$(IFS=,; echo "${rubies[*]}")
         return 0
     fi
@@ -303,34 +383,74 @@ main() {
     # Detect project version first
     detect_project_version || true
 
-    # Detect version manager in priority order
-    if detect_shadowenv; then
-        :
-    elif detect_chruby; then
-        :
-    elif detect_rbenv; then
-        :
-    elif detect_rvm; then
-        :
-    elif detect_asdf; then
-        :
-    elif detect_rv; then
-        :
-    elif detect_mise; then
-        :
-    else
-        VERSION_MANAGER="none"
-        get_system_ruby
+    # Get all installed managers
+    local all_managers
+    all_managers=$(detect_all_managers)
+    local manager_array=($all_managers)
+    local manager_count=${#manager_array[@]}
 
-        if [[ -n "$PROJECT_RUBY_VERSION" && -n "$SYSTEM_RUBY_VERSION" ]]; then
-            if [[ "$PROJECT_RUBY_VERSION" != "$SYSTEM_RUBY_VERSION"* ]]; then
-                WARNING="No version manager detected. System Ruby is $SYSTEM_RUBY_VERSION. Project requires $PROJECT_RUBY_VERSION."
-                VERSION_AVAILABLE="false"
-            else
+    # Check for stored preference
+    read_preference
+
+    # If we have a preference, verify it's still installed
+    if [[ -n "$PREFERRED_MANAGER" ]]; then
+        if [[ " $all_managers " =~ " $PREFERRED_MANAGER " ]]; then
+            # Use preferred manager
+            case "$PREFERRED_MANAGER" in
+                shadowenv) detect_shadowenv ;;
+                chruby) detect_chruby ;;
+                rbenv) detect_rbenv ;;
+                rvm) detect_rvm ;;
+                asdf) detect_asdf ;;
+                rv) detect_rv ;;
+                mise) detect_mise ;;
+            esac
+        else
+            WARNING="Preferred manager '$PREFERRED_MANAGER' is no longer installed. Please reconfigure."
+            PREFERRED_MANAGER=""
+        fi
+    fi
+
+    # If no preference and multiple managers, signal that user should choose
+    if [[ -z "$PREFERRED_MANAGER" && $manager_count -gt 1 ]]; then
+        # Output special marker for Claude to prompt user
+        echo "MULTIPLE_MANAGERS_FOUND=true"
+        echo "AVAILABLE_MANAGERS=$all_managers"
+        echo "MANAGER_COUNT=$manager_count"
+        echo "NEEDS_USER_CHOICE=true"
+        return
+    fi
+
+    # If no preference but only one manager (or none), use standard detection
+    if [[ -z "$VERSION_MANAGER" || "$VERSION_MANAGER" == "none" ]]; then
+        if detect_shadowenv; then
+            :
+        elif detect_chruby; then
+            :
+        elif detect_rbenv; then
+            :
+        elif detect_rvm; then
+            :
+        elif detect_asdf; then
+            :
+        elif detect_rv; then
+            :
+        elif detect_mise; then
+            :
+        else
+            VERSION_MANAGER="none"
+            get_system_ruby
+
+            if [[ -n "$PROJECT_RUBY_VERSION" && -n "$SYSTEM_RUBY_VERSION" ]]; then
+                if [[ "$PROJECT_RUBY_VERSION" != "$SYSTEM_RUBY_VERSION"* ]]; then
+                    WARNING="No version manager detected. System Ruby is $SYSTEM_RUBY_VERSION. Project requires $PROJECT_RUBY_VERSION."
+                    VERSION_AVAILABLE="false"
+                else
+                    VERSION_AVAILABLE="true"
+                fi
+            elif [[ -n "$SYSTEM_RUBY_VERSION" ]]; then
                 VERSION_AVAILABLE="true"
             fi
-        elif [[ -n "$SYSTEM_RUBY_VERSION" ]]; then
-            VERSION_AVAILABLE="true"
         fi
     fi
 
@@ -358,6 +478,9 @@ main() {
     fi
     if [[ -n "$WARNING" ]]; then
         echo "WARNING=$WARNING"
+    fi
+    if [[ -n "$PREFERRED_MANAGER" ]]; then
+        echo "PREFERRED_MANAGER=$PREFERRED_MANAGER"
     fi
 }
 

@@ -52,6 +52,8 @@ Detects and configures Ruby version managers for proper environment setup.
 - Finds project Ruby version from `.ruby-version`, `.tool-versions`, or `Gemfile`
 - Provides correct activation commands for each manager
 - Handles edge cases (missing versions, multiple managers, etc.)
+- **NEW:** Asks for preferred manager when multiple are installed
+- Stores preference in `~/.config/ruby-skills/`
 
 **Prior Art:**
 

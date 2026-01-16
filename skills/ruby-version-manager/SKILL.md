@@ -21,6 +21,38 @@ Detects and configures Ruby version managers for proper environment setup.
 
 **Proactive detection prevents version mismatch errors.**
 
+## Manager Preference
+
+When multiple version managers are installed, the skill asks you which one to use.
+
+### How Preferences Work
+
+1. **detect.sh checks for stored preference first** (in `~/.config/ruby-skills/preference.json`)
+2. **If no preference and multiple managers found**, outputs `NEEDS_USER_CHOICE=true`
+3. **Claude should ask the user** which manager to use
+4. **Run set-preference.sh** to store the choice
+
+### Setting Preference
+
+```bash
+# Store preference (saved to ~/.config/ruby-skills/preference.json)
+/path/to/set-preference.sh chruby
+```
+
+### When Claude Sees NEEDS_USER_CHOICE=true
+
+Ask the user:
+
+> Multiple Ruby version managers detected: {AVAILABLE_MANAGERS}
+>
+> Which one would you like to use?
+>
+> 1. [manager1]
+> 2. [manager2]
+> ...
+
+Then run `set-preference.sh` with their choice.
+
 ## Critical: Non-Persistent Bash Sessions
 
 Each bash command in Claude Code runs in a **fresh shell**. Environment variables and shell configurations do NOT persist between commands.

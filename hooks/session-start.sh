@@ -54,13 +54,17 @@ This is a Ruby project. You MUST use the ruby-version-manager skill.
 
 **REQUIRED BEFORE ANY RUBY COMMAND:**
 1. Run the detect.sh script: ${PLUGIN_ROOT}/skills/ruby-version-manager/detect.sh
-2. Use the ACTIVATION_COMMAND from the output
-3. Chain activation with your command using &&
+2. If output contains NEEDS_USER_CHOICE=true:
+   - Ask user which manager they prefer from AVAILABLE_MANAGERS
+   - Run set-preference.sh with their choice
+   - Re-run detect.sh
+3. Use the ACTIVATION_COMMAND from the output
+4. Chain activation with your command using &&
 
 **DO NOT:**
 - Run ruby, bundle, gem, rake, rails, rspec without activation
-- Assume which version manager is installed
-- Skip detection even if you think you know the setup
+- Assume which version manager to use when multiple are installed
+- Skip the preference question if NEEDS_USER_CHOICE=true
 
 **The skill content is below. Follow it exactly.**
 
