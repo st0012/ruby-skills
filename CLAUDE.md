@@ -105,6 +105,21 @@ claude
 # Claude should automatically use the ruby-version-manager skill
 ```
 
+## Files That Must Stay In Sync
+
+**`hooks/session-start.sh` and `skills/ruby-version-manager/SKILL.md` contain overlapping instructions.**
+
+The session-start hook (lines 52-74) has inline instructions about:
+- Running detect.sh
+- Handling NEEDS_USER_CHOICE=true
+- Using ACTIVATION_COMMAND
+- DO NOT list for Ruby commands
+
+These instructions mirror content in SKILL.md. When updating either file:
+1. Check if the change affects shared content
+2. Update both files if needed
+3. Run the full plugin test to verify behavior
+
 ## Common Issues
 
 ### chruby not detected
