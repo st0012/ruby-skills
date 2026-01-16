@@ -169,65 +169,32 @@ All Ruby ecosystem commands need version manager activation:
 
 ## Running Ruby Commands
 
-Always prefix Ruby commands with the appropriate activation:
+Use `ACTIVATION_COMMAND` from detect.sh, chained with your Ruby command:
 
-**rbenv:**
 ```bash
+# rbenv
 eval "$(rbenv init -)" && bundle install
-eval "$(rbenv init -)" && bundle exec rspec
-eval "$(rbenv init -)" && bundle exec rake test
-```
 
-**chruby:**
-```bash
-# Use ACTIVATION_COMMAND from detect.sh - it includes the correct path and version
+# chruby (use explicit version, not auto.sh - auto.sh only triggers on cd)
 source /usr/local/share/chruby/chruby.sh && chruby ruby-3.3.0 && bundle install
-source /usr/local/share/chruby/chruby.sh && chruby ruby-3.3.0 && bundle exec rspec
-source /usr/local/share/chruby/chruby.sh && chruby ruby-3.3.0 && bundle exec rake test
-```
 
-> **Note:** We use explicit `chruby <version>` instead of `auto.sh` because `auto.sh` only triggers on directory change (`cd`), which doesn't work in Claude Code's non-persistent shell sessions.
-
-**asdf (v0.16+):**
-```bash
-asdf exec bundle install
-asdf exec bundle exec rspec
-asdf exec bundle exec rake test
-```
-
-**asdf (<v0.16):**
-```bash
-source "$HOME/.asdf/asdf.sh" && asdf exec bundle install
-source "$HOME/.asdf/asdf.sh" && asdf exec bundle exec rspec
-source "$HOME/.asdf/asdf.sh" && asdf exec bundle exec rake test
-```
-
-**mise:**
-```bash
-mise x -- bundle install
-mise x -- bundle exec rspec
-mise x -- bundle exec rake test
-```
-
-**rvm:**
-```bash
+# rvm
 source "$HOME/.rvm/scripts/rvm" && bundle install
-source "$HOME/.rvm/scripts/rvm" && bundle exec rspec
-source "$HOME/.rvm/scripts/rvm" && bundle exec rake test
-```
 
-**rv:**
-```bash
+# asdf (v0.16+)
+asdf exec bundle install
+
+# asdf (<v0.16)
+source "$HOME/.asdf/asdf.sh" && asdf exec bundle install
+
+# mise
+mise x -- bundle install
+
+# rv
 rv ruby run -- bundle install
-rv ruby run -- bundle exec rspec
-rv ruby run -- bundle exec rake test
-```
 
-**shadowenv:**
-```bash
+# shadowenv
 shadowenv exec -- bundle install
-shadowenv exec -- bundle exec rspec
-shadowenv exec -- bundle exec rake test
 ```
 
 ## Edge Case Handling
@@ -275,13 +242,6 @@ The project may specify versions as:
 
 ### CI/Docker environments
 If no version manager is detected but Ruby is available, `VERSION_MANAGER=none`. Use the system Ruby directly.
-
-## Environment Variables to Clear
-
-Before running Ruby LSP or when debugging Bundler issues, these environment variables can interfere:
-- `RUBY_GC_*` variables (all garbage collection tuning)
-- `VERBOSE`
-- `DEBUG`
 
 ## Troubleshooting
 
