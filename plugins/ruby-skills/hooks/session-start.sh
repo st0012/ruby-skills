@@ -58,13 +58,19 @@ This is a Ruby project. You MUST use the ruby-version-manager skill.
    - Ask user which manager they prefer from AVAILABLE_MANAGERS
    - Run set-preference.sh with their choice
    - Re-run detect.sh
-3. Use the ACTIVATION_COMMAND from the output
-4. Chain activation with your command using &&
+3. If output contains NEEDS_VERSION_CONFIRM=true:
+   - No version specifier was found. Ask the user:
+     \"No .ruby-version found in this directory or parent. Use Ruby [SUGGESTED_VERSION] (latest installed) for this session?\"
+   - If yes, construct activation command using SUGGESTED_VERSION
+   - If no, show INSTALLED_RUBIES and let user pick
+4. Use the ACTIVATION_COMMAND from the output
+5. Chain activation with your command using &&
 
 **DO NOT:**
 - Run ruby, bundle, gem, rake, rails, rspec without activation
 - Assume which version manager to use when multiple are installed
 - Skip the preference question if NEEDS_USER_CHOICE=true
+- Skip the version confirmation if NEEDS_VERSION_CONFIRM=true
 
 **The skill content is below. Follow it exactly.**
 
