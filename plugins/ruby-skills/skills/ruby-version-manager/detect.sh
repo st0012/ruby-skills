@@ -111,6 +111,17 @@ detect_project_version() {
         fi
     fi
 
+    # Check parent .ruby-version
+    if [[ -f "../.ruby-version" ]]; then
+        local version
+        version=$(cat "../.ruby-version" | tr -d '[:space:]')
+        if [[ -n "$version" ]]; then
+            parse_ruby_version "$version"
+            PROJECT_VERSION_SOURCE="../.ruby-version"
+            return 0
+        fi
+    fi
+
     return 1
 }
 
