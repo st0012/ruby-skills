@@ -1,11 +1,11 @@
-# Ruby Skills Plugin - Development Guide
+# Ruby Skills - Development Guide
 
 ## For Claude: When to Run Tests
 
 **Run these tests automatically when:**
-- You modify any `.sh` script in this plugin
+- You modify any `.sh` script in either plugin
 - You change detection logic in `detect.sh` or `detect-all-managers.sh`
-- Before committing changes to the plugin
+- Before committing changes to either plugin
 - When debugging issues reported by the user
 
 **Minimum verification before any commit:**
@@ -14,17 +14,35 @@
 
 ## Project Structure
 
+This repository is a **plugin marketplace** containing two plugins:
+
 ```
-ruby-skills/
-├── plugin.json           # Plugin manifest
-├── hooks/
-│   └── session-start.sh  # Injects skill context on Ruby project detection
-└── skills/
-    └── ruby-version-manager/
-        ├── SKILL.md              # Main skill documentation (Claude reads this)
-        ├── detect.sh             # Main detection script
-        ├── detect-all-managers.sh # Shared detection logic (sourced by detect.sh)
-        └── set-preference.sh     # Stores user's manager preference
+ruby-skills/                            # Marketplace root
+├── .claude-plugin/
+│   └── marketplace.json                # Marketplace definition
+├── plugins/
+│   ├── ruby-skills/                    # Plugin: version manager detection
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/
+│   │   │   ├── hooks.json
+│   │   │   └── session-start.sh
+│   │   └── skills/
+│   │       └── ruby-version-manager/
+│   │           ├── SKILL.md
+│   │           ├── detect.sh
+│   │           ├── detect-all-managers.sh
+│   │           └── set-preference.sh
+│   └── ruby-lsp/                       # Plugin: LSP integration
+│       ├── .claude-plugin/plugin.json
+│       ├── .lsp.json
+│       ├── hooks/
+│       │   ├── hooks.json
+│       │   └── check-ruby-lsp.sh
+│       ├── scripts/
+│       │   └── launch-ruby-lsp.sh
+│       └── README.md
+├── CLAUDE.md                           # This file
+└── README.md                           # User documentation
 ```
 
 ## Test Suite
@@ -35,7 +53,7 @@ ruby-skills/
 
 ```bash
 cd /path/to/ruby/project
-/path/to/ruby-skills/skills/ruby-version-manager/detect.sh
+/path/to/ruby-skills/plugins/ruby-skills/skills/ruby-version-manager/detect.sh
 ```
 
 **Verify:**
@@ -63,7 +81,7 @@ cd /path/to/ruby/project
 rm -f ~/.config/ruby-skills/preference.json
 
 # Run detection
-/path/to/ruby-skills/skills/ruby-version-manager/detect.sh
+/path/to/ruby-skills/plugins/ruby-skills/skills/ruby-version-manager/detect.sh
 ```
 
 **Verify:** Output includes `NEEDS_USER_CHOICE=true` and `AVAILABLE_MANAGERS` lists all installed managers.
@@ -76,13 +94,13 @@ rm -f ~/.config/ruby-skills/preference.json
 
 ```bash
 # Set preference
-/path/to/ruby-skills/skills/ruby-version-manager/set-preference.sh <manager>
+/path/to/ruby-skills/plugins/ruby-skills/skills/ruby-version-manager/set-preference.sh <manager>
 
 # Verify file contents
 cat ~/.config/ruby-skills/preference.json
 
 # Verify detect.sh uses the preference
-/path/to/ruby-skills/skills/ruby-version-manager/detect.sh
+/path/to/ruby-skills/plugins/ruby-skills/skills/ruby-version-manager/detect.sh
 ```
 
 **Verify:** `PREFERRED_MANAGER=<manager>` appears in output.
@@ -107,9 +125,9 @@ claude
 
 ## Files That Must Stay In Sync
 
-**`hooks/session-start.sh` and `skills/ruby-version-manager/SKILL.md` contain overlapping instructions.**
+**`plugins/ruby-skills/hooks/session-start.sh` and `plugins/ruby-skills/skills/ruby-version-manager/SKILL.md` contain overlapping instructions.**
 
-The session-start hook (lines 52-74) has inline instructions about:
+The session-start hook has inline instructions about:
 - Running detect.sh
 - Handling NEEDS_USER_CHOICE=true
 - Using ACTIVATION_COMMAND
@@ -135,3 +153,61 @@ The `ACTIVATION_COMMAND` must use explicit `chruby <version>`, not `auto.sh`. Th
 ### Environment doesn't persist
 
 Expected behavior. Claude Code runs each Bash command in a fresh shell. Always chain: `ACTIVATION && ruby_command`.
+
+## ruby-lsp Plugin
+
+### Overview
+
+The `plugins/ruby-lsp/` directory contains a Claude Code LSP plugin that provides Ruby language server integration. It depends on the `ruby-skills` plugin for Ruby environment detection.
+
+**Important:** Requires `ENABLE_LSP_TOOL=1` environment variable due to a known Claude Code race condition bug.
+
+### Architecture
+
+```
+plugins/ruby-lsp/
+├── .claude-plugin/
+│   └── plugin.json        # Plugin manifest
+├── .lsp.json              # LSP server configuration
+├── hooks/
+│   ├── hooks.json         # Hook configuration
+│   └── check-ruby-lsp.sh  # SessionStart hook - early warnings
+├── scripts/
+│   └── launch-ruby-lsp.sh # LSP launcher - detection + activation + launch
+└── README.md              # User documentation
+```
+
+### Key Design Decisions
+
+1. **Separate plugin from ruby-skills**: Keeps LSP concerns isolated; users can install version manager support without LSP, or both.
+
+2. **Standard plugin structure**: Each plugin has its own `.claude-plugin/plugin.json` and configuration files, following the pattern established by other Claude Code plugin marketplaces.
+
+3. **Depends on ruby-skills' detect.sh**: Reuses existing detection logic rather than duplicating. The launcher script finds detect.sh from the installed ruby-skills plugin in the cache.
+
+4. **Auto-install ruby-lsp gem**: If the gem isn't installed for the detected Ruby version, the launcher installs it automatically. Progress is logged to stderr (visible to user).
+
+5. **SessionStart hook for early warnings**: Checks dependencies at session start so users see problems before trying to use LSP features.
+
+6. **Explicit failure on NEEDS_USER_CHOICE**: When multiple version managers are detected without a preference, the launcher fails with clear instructions rather than guessing.
+
+### Testing
+
+**Automated (script-level):**
+- Test detect.sh produces expected output in Ruby projects
+- Test hook script handles missing ruby-skills gracefully
+- Test launcher script handles NEEDS_USER_CHOICE case
+
+**Manual (plugin-level):**
+- Install both plugins from marketplace
+- Ensure `ENABLE_LSP_TOOL=1` is set
+- Test in Ruby project: hover, go-to-definition, diagnostics
+- Test auto-install flow by uninstalling ruby-lsp gem first
+- Test multiple manager scenario by removing preference
+
+### Known Limitations
+
+- Requires `ENABLE_LSP_TOOL=1` environment variable (Claude Code bug workaround)
+- `${CLAUDE_PLUGIN_ROOT}` in `.lsp.json` is used for the launch script path
+- Each Bash command runs in fresh shell, so activation must be chained with ruby-lsp launch
+- Some version managers (like chruby) use undefined variables, requiring `set +u` in subshells
