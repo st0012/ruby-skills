@@ -17,6 +17,12 @@
       },
       "description": "Ruby version manager detection, environment setup, and more",
       "version": "0.1.0"
+    },
+    {
+      "name": "ruby-lsp",
+      "source": "./plugins/ruby-lsp",
+      "description": "Ruby LSP integration with automatic version manager detection",
+      "version": "1.0.0"
     }
   ]
 }

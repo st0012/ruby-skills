@@ -1,0 +1,13 @@
+{
+  "ruby": {
+    "command": "${CLAUDE_PLUGIN_ROOT}/scripts/launch-ruby-lsp.sh",
+    "extensionToLanguage": {
+      ".rb": "ruby",
+      ".erb": "erb",
+      ".rake": "ruby",
+      ".gemspec": "ruby",
+      ".ru": "ruby",
+      "Rakefile": "ruby"
+    }
+  }
+}
