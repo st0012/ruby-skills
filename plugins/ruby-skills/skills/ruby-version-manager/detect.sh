@@ -363,6 +363,19 @@ get_system_ruby() {
     fi
 }
 
+# Get the latest installed Ruby version (highest semver)
+get_latest_installed_version() {
+    if [[ -z "$INSTALLED_RUBIES" ]]; then
+        echo ""
+        return
+    fi
+
+    # Extract version numbers, sort by semver, take highest
+    echo "$INSTALLED_RUBIES" | tr ',' '\n' |
+        grep -oE '[0-9]+\.[0-9]+\.[0-9]+' |
+        sort -t. -k1,1n -k2,2n -k3,3n | tail -1
+}
+
 # Main detection logic
 main() {
     # Detect project version first
