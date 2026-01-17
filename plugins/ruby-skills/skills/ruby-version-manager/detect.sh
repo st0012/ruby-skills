@@ -20,6 +20,8 @@ VERSION_AVAILABLE="false"
 ACTIVATION_COMMAND=""
 SYSTEM_RUBY_VERSION=""
 WARNING=""
+SUGGESTED_VERSION=""
+NEEDS_VERSION_CONFIRM="false"
 
 # Preference storage
 PREFERENCE_FILE_USER="$HOME/.config/ruby-skills/preference.json"
@@ -455,6 +457,16 @@ main() {
     # Check if requested version is available
     check_version_available
 
+    # If no project version found but we have a manager with installed rubies, suggest latest
+    if [[ -z "$PROJECT_VERSION_SOURCE" && "$VERSION_MANAGER" != "none" && -n "$INSTALLED_RUBIES" ]]; then
+        local latest_version
+        latest_version=$(get_latest_installed_version)
+        if [[ -n "$latest_version" ]]; then
+            SUGGESTED_VERSION="$latest_version"
+            NEEDS_VERSION_CONFIRM="true"
+        fi
+    fi
+
     # Add warning for missing version file
     if [[ -z "$PROJECT_VERSION_SOURCE" && -f "Gemfile" ]]; then
         if [[ -z "$WARNING" ]]; then
@@ -479,6 +491,10 @@ main() {
     fi
     if [[ -n "$PREFERRED_MANAGER" ]]; then
         echo "PREFERRED_MANAGER=$PREFERRED_MANAGER"
+    fi
+    if [[ -n "$SUGGESTED_VERSION" ]]; then
+        echo "SUGGESTED_VERSION=$SUGGESTED_VERSION"
+        echo "NEEDS_VERSION_CONFIRM=true"
     fi
 }
 
