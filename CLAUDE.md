@@ -138,6 +138,21 @@ These instructions mirror content in SKILL.md. When updating either file:
 2. Update both files if needed
 3. Run the full plugin test to verify behavior
 
+## Versioning
+
+This repo has two levels of versioning:
+
+| Version | Location | When to bump |
+|---------|----------|--------------|
+| **Plugin version** | `plugins/<name>/.claude-plugin/plugin.json` AND `.claude-plugin/marketplace.json` (plugin entry) | When that plugin's code/functionality changes |
+| **Marketplace version** | `.claude-plugin/marketplace.json` (`metadata.version`) | When marketplace structure changes (add/remove plugins, change metadata) |
+
+**Key principle:** Plugins are independently versioned. Don't bump the marketplace version for every plugin change.
+
+Example:
+- Adding a feature to ruby-skills → bump ruby-skills to `0.3.0`, leave marketplace at `0.2.0`
+- Adding a new plugin to marketplace → bump marketplace version
+
 ## Common Issues
 
 ### chruby not detected

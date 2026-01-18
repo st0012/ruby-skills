@@ -53,6 +53,19 @@ Ask the user:
 
 Then run `set-preference.sh` with their choice.
 
+### When NEEDS_VERSION_CONFIRM=true
+
+The script couldn't find a version specifier (`.ruby-version`, `.tool-versions`, etc.) but detected installed Ruby versions.
+
+1. Check the `SUGGESTED_VERSION` value (the latest installed Ruby)
+2. Ask the user: "No .ruby-version found. Use Ruby [SUGGESTED_VERSION] for this session?"
+3. If user agrees:
+   - Use the ACTIVATION_COMMAND with the suggested version
+   - For chruby: `source /path/to/chruby.sh && chruby ruby-[VERSION]`
+   - For rbenv: `eval "$(rbenv init -)" && rbenv shell [VERSION]`
+   - For other managers: prepend version selection to commands
+4. If user declines, ask which version they prefer from INSTALLED_RUBIES
+
 ## Critical: Non-Persistent Bash Sessions
 
 Each bash command in Claude Code runs in a **fresh shell**. Environment variables and shell configurations do NOT persist between commands.
