@@ -41,6 +41,7 @@ PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Read the skill content
 skill_content=$(cat "${PLUGIN_ROOT}/skills/ruby-version-manager/SKILL.md" 2>/dev/null || echo "")
+resource_map=$(cat "${PLUGIN_ROOT}/skills/ruby-resource-map/SKILL.md" 2>/dev/null || echo "")
 
 # If skill not found, exit silently
 if [ -z "$skill_content" ]; then
@@ -77,7 +78,13 @@ This is a Ruby project. You MUST use the ruby-version-manager skill.
 ---
 
 ${skill_content}
-</RUBY_PROJECT_DETECTED>"
+</RUBY_PROJECT_DETECTED>
+
+<RUBY_RESOURCE_MAP>
+Authoritative sources for Ruby documentation, typing, and tooling:
+
+${resource_map}
+</RUBY_RESOURCE_MAP>"
 
 # Use jq for proper JSON escaping if available, otherwise fall back to basic escaping
 if command -v jq &>/dev/null; then
