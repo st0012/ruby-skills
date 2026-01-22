@@ -41,9 +41,7 @@ After installation, Claude will automatically use these plugins when working wit
 
 Provides Ruby-specific skills that teach Claude how to work effectively in Ruby projects.
 
-### Current Skills
-
-#### ruby-version-manager
+### ruby-version-manager
 
 Detects and configures Ruby version managers for proper environment setup.
 
@@ -60,9 +58,16 @@ Detects and configures Ruby version managers for proper environment setup.
 
 **Automatic detection:** When you start a Claude Code session in a directory containing `Gemfile`, `.ruby-version`, `.tool-versions`, or `.mise.toml`, the plugin automatically instructs Claude to detect and use the correct Ruby version.
 
-### Planned Skills
+### ruby-resource-map
 
-More Ruby skills are planned for this plugin. Contributions and suggestions welcome.
+Authoritative resource map for Ruby development. Loaded at session start to ensure Claude uses correct, up-to-date sources.
+
+**Provides:**
+
+- Official documentation links (version-specific, with correct URLs)
+- Sources to avoid (ruby-doc.org, apidock.com)
+- Typing ecosystem overview (RBI vs RBS, Sorbet, Steep, inline comments)
+- Key tool references with repo links (Tapioca, Spoom, etc.)
 
 ### How Version Manager Detection Works
 
@@ -148,7 +153,9 @@ ruby-skills/                        # Marketplace
 ├── plugins/
 │   ├── ruby-skills/                # Plugin: Ruby skills
 │   │   ├── hooks/
-│   │   └── skills/ruby-version-manager/
+│   │   └── skills/
+│   │       ├── ruby-version-manager/
+│   │       └── ruby-resource-map/
 │   └── ruby-lsp/                   # Plugin: LSP integration
 │       ├── hooks/
 │       ├── scripts/

@@ -27,11 +27,13 @@ ruby-skills/                            # Marketplace root
 │   │   │   ├── hooks.json
 │   │   │   └── session-start.sh
 │   │   └── skills/
-│   │       └── ruby-version-manager/
-│   │           ├── SKILL.md
-│   │           ├── detect.sh
-│   │           ├── detect-all-managers.sh
-│   │           └── set-preference.sh
+│   │       ├── ruby-version-manager/
+│   │       │   ├── SKILL.md
+│   │       │   ├── detect.sh
+│   │       │   ├── detect-all-managers.sh
+│   │       │   └── set-preference.sh
+│   │       └── ruby-resource-map/
+│   │           └── SKILL.md            # Authoritative resource map
 │   └── ruby-lsp/                       # Plugin: LSP integration
 │       ├── .claude-plugin/plugin.json
 │       ├── .lsp.json
