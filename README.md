@@ -1,6 +1,8 @@
 # Ruby Skills
 
-Ruby's ecosystem has many version managers, a rapidly evolving typing landscape, and documentation scattered across multiple sources. These Claude Code plugins help Claude navigate each of these — activating the correct Ruby environment, pointing to authoritative docs, and providing LSP-powered code intelligence.
+Ruby's ecosystem has many version managers, a rapidly evolving typing and tooling landscape, and documentation scattered across multiple sources.
+
+These Claude Code plugins help Claude navigate each of these — activating the correct Ruby environment, pointing to authoritative docs, and providing LSP-powered code intelligence.
 
 ## Plugins
 
@@ -31,22 +33,15 @@ claude plugin install ruby-lsp@ruby-skills
 
 ## What to Expect
 
-After installation, start a Claude Code session in any Ruby project. Claude will:
-
-1. Detect your version manager (chruby, rbenv, rvm, asdf, mise, rv, or shadowenv)
-2. Find your project's Ruby version from `.ruby-version`, `.tool-versions`, `.mise.toml`, or `Gemfile`
-3. Automatically use the correct Ruby for all commands — no manual setup needed
-
-If you have multiple version managers installed, Claude will ask your preference once and remember it.
-
-The ruby-skills plugin also provides Claude with a curated map of authoritative documentation sources, including version-specific docs and a few quick references for the Ruby typing ecosystem.
+After installation, start a Claude Code session in any Ruby project — no configuration needed. The plugins activate automatically.
 
 ### ruby-skills plugin
 
-Provides two skills:
+- Detects your version manager and project Ruby version, then activates it for all commands
+- Supports chruby, rbenv, rvm, asdf, mise, rv, and shadowenv
+- Provides Claude with a curated map of authoritative documentation sources, including version-specific docs and the references about the Ruby typing ecosystem
 
-- **Version manager detection** — Activates the correct Ruby for your project. See the [technical reference](plugins/ruby-skills/skills/ruby-version-manager/README.md) for details on the detection logic.
-- **Resource map** — Curated documentation sources and typing ecosystem references.
+See the [technical reference](plugins/ruby-skills/skills/ruby-version-manager/README.md) for detection internals.
 
 ### ruby-lsp plugin
 
