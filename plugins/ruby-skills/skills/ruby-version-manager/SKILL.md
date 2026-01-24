@@ -11,164 +11,75 @@ Detects and configures Ruby version managers for proper environment setup.
 
 **Run detect.sh IMMEDIATELY when:**
 - Starting work in a directory with `Gemfile`, `.ruby-version`, or `.tool-versions`
-- Before your first `ruby`, `bundle`, `gem`, `rake`, `rails`, or `rspec` command
+- Before your first Ruby command (`ruby`, `bundle`, `gem`, `rake`, `rails`, `rspec`, etc.)
 - When switching between Ruby projects
 
-**Do NOT wait for:**
-- Ruby commands to fail first
-- User to explicitly ask for version detection
-- Problems to occur
+**Do NOT wait** for commands to fail or user requests. Proactive detection prevents version mismatch errors.
 
-**Proactive detection prevents version mismatch errors.**
-
-## Manager Preference
-
-When multiple version managers are installed, the skill asks you which one to use.
-
-### How Preferences Work
-
-1. **detect.sh checks for stored preference first** (in `~/.config/ruby-skills/preference.json`)
-2. **If no preference and multiple managers found**, outputs `NEEDS_USER_CHOICE=true`
-3. **Claude should ask the user** which manager to use
-4. **Run set-preference.sh** to store the choice
-
-### Setting Preference
-
-```bash
-# Store preference (saved to ~/.config/ruby-skills/preference.json)
-/path/to/set-preference.sh chruby
-```
-
-### When Claude Sees NEEDS_USER_CHOICE=true
-
-Ask the user:
-
-> Multiple Ruby version managers detected: {AVAILABLE_MANAGERS}
->
-> Which one would you like to use?
->
-> 1. [manager1]
-> 2. [manager2]
-> ...
-
-Then run `set-preference.sh` with their choice.
-
-### When NEEDS_VERSION_CONFIRM=true
-
-The script couldn't find a version specifier (`.ruby-version`, `.tool-versions`, etc.) but detected installed Ruby versions.
-
-1. Check the `SUGGESTED_VERSION` value (the latest installed Ruby)
-2. Ask the user: "No .ruby-version found. Use Ruby [SUGGESTED_VERSION] for this session?"
-3. If user agrees:
-   - Use the ACTIVATION_COMMAND with the suggested version
-   - For chruby: `source /path/to/chruby.sh && chruby ruby-[VERSION]`
-   - For rbenv: `eval "$(rbenv init -)" && rbenv shell [VERSION]`
-   - For other managers: prepend version selection to commands
-4. If user declines, ask which version they prefer from INSTALLED_RUBIES
-
-## Critical: Non-Persistent Bash Sessions
-
-Each bash command in Claude Code runs in a **fresh shell**. Environment variables and shell configurations do NOT persist between commands.
-
-**You MUST chain activation with your command using `&&`:**
-
-```bash
-# WRONG - activation is lost before bundle runs:
-eval "$(rbenv init -)"
-bundle install
-
-# CORRECT - single command with activation:
-eval "$(rbenv init -)" && bundle install
-```
-
-This applies to ALL Ruby commands: `ruby`, `gem`, `bundle`, `rake`, `rspec`, `rails`, etc.
+**Always chain activation with commands:** `ACTIVATION_COMMAND && ruby_command`
 
 ## Usage
 
-### Step 1: Run Detection
+### Step 1: Run detect.sh
 
-Run the detection script from your Ruby project's root directory:
-
-```bash
-# Find and run detect.sh (adjust path based on your installation)
-# As a plugin:
-~/.claude/plugins/cache/*/ruby-skills/*/skills/ruby-version-manager/detect.sh
-
-# As a personal skill:
-~/.claude/skills/ruby-version-manager/detect.sh
-
-# The session-start hook will tell you the exact path
-```
+Run `detect.sh` from this skill's directory (path provided by session-start hook).
 
 ### Step 2: Parse Output
 
-The script outputs key=value pairs. Example output:
+The script outputs key=value pairs:
 
-```
+```text
 VERSION_MANAGER=rbenv
-VERSION_MANAGER_PATH=/Users/you/.rbenv
 PROJECT_RUBY_VERSION=3.2.0
-PROJECT_VERSION_SOURCE=.ruby-version
-RUBY_ENGINE=ruby
-INSTALLED_RUBIES=3.1.2,3.2.0,3.3.0
 VERSION_AVAILABLE=true
 ACTIVATION_COMMAND=eval "$(rbenv init -)"
 ```
 
 ### Step 3: Execute Ruby Commands
 
-Use the `ACTIVATION_COMMAND` value, chained with your Ruby command:
+Chain `ACTIVATION_COMMAND` with your Ruby command:
 
 ```bash
-# Using the ACTIVATION_COMMAND from above:
 eval "$(rbenv init -)" && bundle install
 eval "$(rbenv init -)" && bundle exec rspec
-eval "$(rbenv init -)" && ruby script.rb
 ```
 
-### When to Run Detection
-
-Run `detect.sh` once when:
-- Starting work on a Ruby project
-- Switching to a different Ruby project
-- Ruby commands fail unexpectedly
-
-You do NOT need to re-run it before every Ruby command - just reuse the `ACTIVATION_COMMAND`.
+Run detect.sh once per project session; reuse `ACTIVATION_COMMAND` for subsequent commands.
 
 ## Output Variables
 
 | Variable | Description |
 |----------|-------------|
-| `VERSION_MANAGER` | Detected manager: shadowenv, chruby, rbenv, rvm, asdf, rv, mise, or none |
-| `VERSION_MANAGER_PATH` | Path to the version manager installation |
-| `PROJECT_RUBY_VERSION` | Ruby version required by the project |
-| `PROJECT_VERSION_SOURCE` | File specifying the version (.ruby-version, .tool-versions, .mise.toml, Gemfile) |
-| `RUBY_ENGINE` | Ruby implementation (ruby, truffleruby, jruby) |
-| `INSTALLED_RUBIES` | Comma-separated list of available Ruby versions |
+| `VERSION_MANAGER` | Detected: shadowenv, chruby, rbenv, rvm, asdf, rv, mise, or none |
+| `VERSION_MANAGER_PATH` | Installation path |
+| `PROJECT_RUBY_VERSION` | Version required by project |
+| `PROJECT_VERSION_SOURCE` | Source file (.ruby-version, .tool-versions, .mise.toml, Gemfile) |
+| `RUBY_ENGINE` | Implementation (ruby, truffleruby, jruby) |
+| `INSTALLED_RUBIES` | Comma-separated available versions |
 | `VERSION_AVAILABLE` | true/false - whether requested version is installed |
-| `ACTIVATION_COMMAND` | Shell command to activate the version manager |
-| `SYSTEM_RUBY_VERSION` | System Ruby version (when VERSION_MANAGER=none) |
-| `WARNING` | Any warnings about the environment |
+| `ACTIVATION_COMMAND` | Shell command to activate the manager |
+| `SYSTEM_RUBY_VERSION` | System Ruby (when VERSION_MANAGER=none) |
+| `WARNING` | Environment warnings |
+| `NEEDS_USER_CHOICE` | true when multiple managers detected without preference |
+| `AVAILABLE_MANAGERS` | List of detected managers (when NEEDS_USER_CHOICE=true) |
+| `NEEDS_VERSION_CONFIRM` | true when no version specifier found |
+| `SUGGESTED_VERSION` | Latest installed Ruby (when NEEDS_VERSION_CONFIRM=true) |
 
-## Activation Commands Reference
+## Activation Commands by Manager
 
-Use the `ACTIVATION_COMMAND` from detect.sh output. If you need to construct commands manually:
-
-| Manager | Activation Command | Execution Pattern |
-|---------|-------------------|-------------------|
-| rbenv | `eval "$(rbenv init -)"` | `rbenv exec ruby ...` or activate then run |
-| chruby | `source .../chruby.sh && chruby <version>` | Explicit version switch (detect.sh provides full command) |
-| rvm | `source "$HOME/.rvm/scripts/rvm"` | Activate then run, or use `~/.rvm/bin/rvm-auto-ruby` |
-| asdf (v0.16+) | None needed | `asdf exec ruby ...` |
-| asdf (<v0.16) | `source "$HOME/.asdf/asdf.sh"` | `asdf exec ruby ...` |
-| mise | None needed | `mise x -- ruby ...` |
-| rv | None needed | `rv ruby run -- ...` |
-| shadowenv | None needed | `shadowenv exec -- ruby ...` |
+| Manager | Activation Command | Notes |
+|---------|-------------------|-------|
+| rbenv | `eval "$(rbenv init -)"` | Or use `rbenv exec ruby ...` |
+| chruby | `source .../chruby.sh && chruby <version>` | detect.sh provides full command |
+| rvm | `source "$HOME/.rvm/scripts/rvm"` | Or use `~/.rvm/bin/rvm-auto-ruby` |
+| asdf (v0.16+) | None | `asdf exec ruby ...` |
+| asdf (<v0.16) | `source "$HOME/.asdf/asdf.sh"` | Then `asdf exec ruby ...` |
+| mise | None | `mise x -- ruby ...` |
+| rv | None | `rv ruby run -- ...` |
+| shadowenv | None | `shadowenv exec -- ruby ...` |
 | none | None | `ruby ...` (uses PATH) |
 
 ## Commands Requiring Activation
-
-All Ruby ecosystem commands need version manager activation:
 
 | Category | Commands |
 |----------|----------|
@@ -178,89 +89,55 @@ All Ruby ecosystem commands need version manager activation:
 | Linting | `rubocop`, `standardrb`, `reek` |
 | LSP/IDE | `ruby-lsp`, `solargraph`, `steep` |
 | Debug | `pry`, `byebug`, `debug` |
-| Any gem binary | Executables installed via `gem install` or in `Gemfile` |
+| Gem binaries | Any executable from `gem install` or Gemfile |
 
-## Running Ruby Commands
+## Handling Special Cases
 
-Use `ACTIVATION_COMMAND` from detect.sh, chained with your Ruby command:
+### Multiple Version Managers (NEEDS_USER_CHOICE=true)
+
+Ask the user which manager to use, then store preference:
 
 ```bash
-# rbenv
-eval "$(rbenv init -)" && bundle install
-
-# chruby (use explicit version, not auto.sh - auto.sh only triggers on cd)
-source /usr/local/share/chruby/chruby.sh && chruby ruby-3.3.0 && bundle install
-
-# rvm
-source "$HOME/.rvm/scripts/rvm" && bundle install
-
-# asdf (v0.16+)
-asdf exec bundle install
-
-# asdf (<v0.16)
-source "$HOME/.asdf/asdf.sh" && asdf exec bundle install
-
-# mise
-mise x -- bundle install
-
-# rv
-rv ruby run -- bundle install
-
-# shadowenv
-shadowenv exec -- bundle install
+/path/to/set-preference.sh chruby  # Saves to ~/.config/ruby-skills/preference.json
 ```
 
-## Edge Case Handling
+Detection priority: shadowenv > chruby > rbenv > rvm > asdf > rv > mise > none
 
-### Multiple version managers installed
-Follow the detection priority order. The script returns the highest-priority manager found:
-shadowenv > chruby > rbenv > rvm > asdf > rv > mise > none
+### No Version Specifier (NEEDS_VERSION_CONFIRM=true)
 
-### Missing .ruby-version file
-- If the Gemfile specifies a Ruby version constraint, warn the user
-- If no constraint exists, the version manager may fall back to a default
-- Recommend creating a `.ruby-version` file for consistency
+Ask: "No .ruby-version found. Use Ruby [SUGGESTED_VERSION] for this session?"
+If declined, show options from INSTALLED_RUBIES.
 
-### Requested version not installed
+### Version Not Installed (VERSION_AVAILABLE=false)
 
-When `VERSION_AVAILABLE=false`, inform the user with this template:
+Inform user and offer installation:
 
-> The project requires Ruby {PROJECT_RUBY_VERSION} but it is not currently installed.
->
-> To install with {VERSION_MANAGER}:
+> Ruby {PROJECT_RUBY_VERSION} is not installed. Install with:
 > - **rbenv:** `rbenv install {VERSION}`
 > - **rvm:** `rvm install {VERSION}`
 > - **asdf:** `asdf install ruby {VERSION}`
 > - **mise:** `mise install ruby@{VERSION}`
-> - **chruby:** Install manually or use ruby-install: `ruby-install ruby {VERSION}`
->
-> Would you like me to run the installation command?
+> - **chruby:** `ruby-install ruby {VERSION}`
 
-**Important:** Always ask before installing. Do NOT auto-install Ruby versions.
+**Always ask before installing.** For chruby, check INSTALLED_RUBIES for compatible versions (same major.minor).
 
-For chruby users, also check if a compatible version exists (same major.minor) in `INSTALLED_RUBIES`.
+### Shadowenv Trust Issues
 
-### Shadowenv trust issues
-Shadowenv requires workspace trust. If you see "untrusted shadowenv program" errors:
-- Inform the user they need to run `shadowenv trust` in the project directory
-- Do not attempt to bypass security
+If "untrusted shadowenv program" error appears, user must run `shadowenv trust` in the project directory.
 
-### Version format variations
-The project may specify versions as:
-- `3.3.0` - semantic version
-- `ruby-3.3.0` - with engine prefix
-- `truffleruby-21.3.0` - alternative Ruby engine
-- `3.3.0-rc1` - pre-release
-- `3.3` - major.minor only (matches any patch level)
+### Version Format Variations
 
-### CI/Docker environments
-If no version manager is detected but Ruby is available, `VERSION_MANAGER=none`. Use the system Ruby directly.
+Supported formats: `3.3.0`, `ruby-3.3.0`, `truffleruby-21.3.0`, `3.3.0-rc1`, `3.3` (matches any patch)
+
+### CI/Docker Environments
+
+When VERSION_MANAGER=none, use system Ruby directly.
 
 ## Troubleshooting
 
 If Ruby commands fail after activation:
-1. Re-run detect.sh to verify the environment
-2. Check `VERSION_AVAILABLE` - install the required version if false
-3. Verify the version manager is properly installed (check `VERSION_MANAGER_PATH`)
-4. For chruby: ensure Ruby installations exist in `~/.rubies` or `/opt/rubies`
-5. For rvm: check both `~/.rvm` and `/usr/local/rvm` paths
+1. Re-run detect.sh to verify environment
+2. Check `VERSION_AVAILABLE` - install if false
+3. Verify manager installation at `VERSION_MANAGER_PATH`
+4. **chruby:** Check `~/.rubies` or `/opt/rubies` for installations
+5. **rvm:** Check both `~/.rvm` and `/usr/local/rvm`
