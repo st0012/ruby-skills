@@ -26,14 +26,27 @@ fi
 
 # Parse detection output
 ACTIVATION_COMMAND=$(echo "$DETECT_OUTPUT" | grep "^ACTIVATION_COMMAND=" | cut -d= -f2-)
+VERSION_MANAGER=$(echo "$DETECT_OUTPUT" | grep "^VERSION_MANAGER=" | cut -d= -f2)
 PROJECT_RUBY=$(echo "$DETECT_OUTPUT" | grep "^PROJECT_RUBY_VERSION=" | cut -d= -f2)
 
 # Check if ruby-lsp is installed for this Ruby version
-# Run in subshell with set +u to isolate from parent's set -u (some version managers use undefined vars)
 if [[ -n "$ACTIVATION_COMMAND" ]]; then
-    if ! (set +u; eval "$ACTIVATION_COMMAND && command -v ruby-lsp") &>/dev/null; then
-        echo "ruby-lsp: gem not installed for Ruby ${PROJECT_RUBY:-unknown}. Will auto-install on first use." >&2
-    fi
+    # Exec-style managers (mise, asdf, rv, shadowenv) use the activation command
+    # as a prefix that wraps the target command as arguments.
+    # Eval-style managers (rbenv, chruby, rvm) modify the shell environment.
+    case "${VERSION_MANAGER:-}" in
+        mise|asdf|rv|shadowenv)
+            if ! $ACTIVATION_COMMAND command -v ruby-lsp &>/dev/null; then
+                echo "ruby-lsp: gem not installed for Ruby ${PROJECT_RUBY:-unknown}. Will auto-install on first use." >&2
+            fi
+            ;;
+        *)
+            # Run in subshell with set +u to isolate from parent's set -u (some version managers use undefined vars)
+            if ! (set +u; eval "$ACTIVATION_COMMAND && command -v ruby-lsp") &>/dev/null; then
+                echo "ruby-lsp: gem not installed for Ruby ${PROJECT_RUBY:-unknown}. Will auto-install on first use." >&2
+            fi
+            ;;
+    esac
 fi
 
 exit 0

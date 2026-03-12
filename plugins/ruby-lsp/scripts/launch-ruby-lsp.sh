@@ -19,6 +19,7 @@ DETECT_OUTPUT=$("$DETECT_SCRIPT")
 
 # Parse key variables we need (use || true to handle missing keys)
 ACTIVATION_COMMAND=$(echo "$DETECT_OUTPUT" | grep "^ACTIVATION_COMMAND=" | cut -d= -f2- || true)
+VERSION_MANAGER=$(echo "$DETECT_OUTPUT" | grep "^VERSION_MANAGER=" | cut -d= -f2 || true)
 NEEDS_USER_CHOICE=$(echo "$DETECT_OUTPUT" | grep "^NEEDS_USER_CHOICE=" | cut -d= -f2 || true)
 AVAILABLE_MANAGERS=$(echo "$DETECT_OUTPUT" | grep "^AVAILABLE_MANAGERS=" | cut -d= -f2 || true)
 
@@ -34,16 +35,42 @@ fi
 # Build activation prefix
 ACTIVATION="${ACTIVATION_COMMAND:-true}"
 
-# Check if ruby-lsp is installed, install if needed
-# Use subshell with set +u to isolate from parent's set -u (some version managers use undefined vars)
-if ! (set +u; eval "$ACTIVATION && command -v ruby-lsp") &>/dev/null; then
-    echo "ruby-lsp: Installing gem..." >&2
-    if ! bash -c "$ACTIVATION && gem install ruby-lsp" >&2; then
-        echo "Error: Failed to install ruby-lsp gem" >&2
-        exit 1
-    fi
-    echo "ruby-lsp: Installation complete." >&2
-fi
+# Exec-style managers (mise, asdf, rv, shadowenv) use an activation command
+# that wraps the target command as arguments (e.g., "mise x -- ruby-lsp").
+# Eval-style managers (rbenv, chruby, rvm) modify the shell environment and
+# chain with && (e.g., 'eval "$(rbenv init -)" && ruby-lsp').
+is_exec_style() {
+    case "${VERSION_MANAGER:-}" in
+        mise|asdf|rv|shadowenv) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-# Launch ruby-lsp with version manager activation
-exec bash -c "$ACTIVATION && exec ruby-lsp"
+if is_exec_style; then
+    # Check if ruby-lsp is installed, install if needed
+    if ! $ACTIVATION command -v ruby-lsp &>/dev/null; then
+        echo "ruby-lsp: Installing gem..." >&2
+        if ! $ACTIVATION gem install ruby-lsp >&2; then
+            echo "Error: Failed to install ruby-lsp gem" >&2
+            exit 1
+        fi
+        echo "ruby-lsp: Installation complete." >&2
+    fi
+
+    # Launch ruby-lsp with version manager wrapping the command
+    exec $ACTIVATION ruby-lsp
+else
+    # Check if ruby-lsp is installed, install if needed
+    # Use subshell with set +u to isolate from parent's set -u (some version managers use undefined vars)
+    if ! (set +u; eval "$ACTIVATION && command -v ruby-lsp") &>/dev/null; then
+        echo "ruby-lsp: Installing gem..." >&2
+        if ! bash -c "$ACTIVATION && gem install ruby-lsp" >&2; then
+            echo "Error: Failed to install ruby-lsp gem" >&2
+            exit 1
+        fi
+        echo "ruby-lsp: Installation complete." >&2
+    fi
+
+    # Launch ruby-lsp with version manager activation
+    exec bash -c "$ACTIVATION && exec ruby-lsp"
+fi
