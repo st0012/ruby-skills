@@ -1,7 +1,7 @@
 {
   "name": "ruby-lsp",
   "description": "Ruby LSP integration with automatic version manager detection",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Stan Lo",
     "email": "stan001212@gmail.com"
