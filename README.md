@@ -17,8 +17,15 @@ claude plugin install ruby-skills@ruby-skills
 
 **From a Claude session:**
 
+Send these as two separate messages. Do not paste them together.
+
 ```bash
 /plugin marketplace add st0012/ruby-skills
+```
+
+After the marketplace is added, send:
+
+```bash
 /plugin install ruby-skills@ruby-skills
 ```
 
